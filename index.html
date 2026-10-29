@@ -1,0 +1,368 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DigiPay</title>
+
+<style>
+*{box-sizing:border-box}
+body{
+ margin:0;
+ font-family:Arial,sans-serif;
+ background:linear-gradient(135deg,#d9f1ff,#e9ddff,#d9ffeb);
+ color:#17436a;
+}
+header{
+ text-align:center;
+ padding:22px;
+ color:white;
+ background:linear-gradient(120deg,#168bd0,#7655d6,#20b99b);
+ border-radius:0 0 25px 25px;
+}
+main{max-width:600px;margin:auto;padding:20px}
+.card{
+ background:white;
+ padding:22px;
+ border-radius:18px;
+ margin:15px 0;
+ box-shadow:0 4px 12px #0002;
+}
+h1,h2{text-align:center}
+input{
+ width:100%;
+ padding:13px;
+ margin:9px 0;
+ border:1px solid #bdd8ed;
+ border-radius:10px;
+ font-size:16px;
+}
+button{
+ padding:14px;
+ border:0;
+ border-radius:12px;
+ background:#247fc5;
+ color:white;
+ font-weight:bold;
+ font-size:15px;
+ margin:5px 0;
+ width:100%;
+}
+.secondary{background:#7655d6}
+.logout{background:#df6262}
+.balance{
+ background:linear-gradient(120deg,#168bd0,#7655d6);
+ color:white;
+ padding:25px;
+ border-radius:20px;
+}
+.balance h1{font-size:34px}
+.grid{
+ display:grid;
+ grid-template-columns:1fr 1fr;
+ gap:10px;
+}
+.hidden{display:none}
+#reader{width:100%;margin-top:15px}
+small{color:#777}
+footer{text-align:center;padding:20px;color:#a33}
+</style>
+</head>
+
+<body>
+
+<header>
+<h1>🪙 DigiPay 💰</h1>
+<p>Digital Wallet Simulation</p>
+DEMO ONLY
+</header>
+
+<main>
+
+<!-- LOGIN PAGE -->
+<section id="auth">
+
+<div class="card" id="login">
+<h2>Welcome Back 👋</h2>
+<p>Login to your DigiPay account</p>
+
+<input id="loginEmail" type="email" placeholder="Email">
+<input id="loginPassword" type="password" placeholder="Password">
+
+<button onclick="loginUser()">Login</button>
+<button class="secondary" onclick="showRegister()">Create New Account</button>
+</div>
+
+<!-- REGISTER PAGE -->
+<div class="card hidden" id="register">
+<h2>Create Account 📝</h2>
+
+<input id="regName" placeholder="Your Name">
+<input id="regEmail" type="email" placeholder="Email">
+<input id="regPassword" type="password" placeholder="Create Password">
+
+<button onclick="registerUser()">Register</button>
+<button class="secondary" onclick="showLogin()">Back to Login</button>
+</div>
+
+</section>
+
+<!-- WALLET DASHBOARD -->
+<section id="dashboard" class="hidden">
+
+<div class="card">
+<h2 id="welcome"></h2>
+<p>Your money, made simple!</p>
+
+<div class="balance">
+<p>Available Demo Balance</p>
+<h1 id="balance">₹5,000.00</h1>
+<small style="color:white">Virtual money only</small>
+</div>
+</div>
+
+<h2>Wallet Services</h2>
+
+<div class="grid">
+<button onclick="addMoney()">➕ Add Money</button>
+<button onclick="sendMoney()">💸 Send Money</button>
+<button onclick="scanQR()">📷 Scan QR</button>
+<button onclick="recharge()">📱 Mobile Recharge</button>
+<button onclick="showHistory()">📜 History</button>
+<button onclick="showProfile()">👤 My Profile</button>
+</div>
+
+<div class="card">
+<h2>QR Scanner</h2>
+<div id="reader"></div>
+<button class="secondary" onclick="stopScanner()">Stop Camera</button>
+<p id="scanResult"></p>
+</div>
+
+<div class="card">
+<h2>Recent Transactions</h2>
+<div id="transactions">No transactions yet.</div>
+</div>
+
+<button class="logout" onclick="logoutUser()">Logout</button>
+
+</section>
+
+</main>
+
+<footer>
+DEMO PROJECT — NO REAL MONEY OR RECHARGES
+</footer>
+
+<script>
+
+let currentUser = null;
+let balance = 5000;
+let transactions = [];
+let scanner = null;
+
+function getUsers(){
+ return JSON.parse(localStorage.getItem("digiUsers") || "[]");
+}
+
+function saveUsers(users){
+ localStorage.setItem("digiUsers",JSON.stringify(users));
+}
+
+function showRegister(){
+ document.getElementById("login").classList.add("hidden");
+ document.getElementById("register").classList.remove("hidden");
+}
+
+function showLogin(){
+ document.getElementById("register").classList.add("hidden");
+ document.getElementById("login").classList.remove("hidden");
+}
+
+function registerUser(){
+ let name=document.getElementById("regName").value.trim();
+ let email=document.getElementById("regEmail").value.trim().toLowerCase();
+ let password=document.getElementById("regPassword").value;
+
+ if(!name || !email || !password){
+  alert("Please fill all details");
+  return;
+ }
+
+ if(password.length<6){
+  alert("Password must contain at least 6 characters");
+  return;
+ }
+
+ let users=getUsers();
+
+ if(users.some(u=>u.email===email)){
+  alert("Account already exists!");
+  return;
+ }
+
+ users.push({
+  name:name,
+  email:email,
+  password:password,
+  balance:5000,
+  transactions:[]
+ });
+
+ saveUsers(users);
+ alert("Registration successful! Please login.");
+ showLogin();
+}
+
+function loginUser(){
+ let email=document.getElementById("loginEmail").value.trim().toLowerCase();
+ let password=document.getElementById("loginPassword").value;
+
+ let user=getUsers().find(
+  u=>u.email===email && u.password===password
+ );
+
+ if(!user){
+  alert("Incorrect email or password");
+  return;
+ }
+
+ currentUser=user;
+ balance=user.balance;
+ transactions=user.transactions || [];
+
+ document.getElementById("auth").classList.add("hidden");
+ document.getElementById("dashboard").classList.remove("hidden");
+
+ document.getElementById("welcome").innerText="Welcome, "+user.name+"!";
+ update();
+}
+
+function saveWallet(){
+ let users=getUsers();
+ let index=users.findIndex(u=>u.email===currentUser.email);
+
+ if(index!==-1){
+  users[index].balance=balance;
+  users[index].transactions=transactions;
+  saveUsers(users);
+ }
+}
+
+function update(){
+ document.getElementById("balance").innerText=
+ "₹"+balance.toFixed(2);
+
+ document.getElementById("transactions").innerHTML=
+ transactions.length
+ ? transactions.map(x=>"<p>"+x+"</p>").join("")
+ : "No transactions yet.";
+}
+
+function addMoney(){
+ let amount=Number(prompt("Enter demo amount"));
+
+ if(!Number.isFinite(amount)||amount<=0)return alert("Invalid amount");
+
+ balance+=amount;
+ transactions.unshift("Added ₹"+amount);
+ saveWallet();
+ update();
+}
+
+function sendMoney(){
+ let receiver=prompt("Enter demo wallet ID");
+ if(!receiver)return;
+
+ let amount=Number(prompt("Enter amount"));
+
+ if(!Number.isFinite(amount)||amount<=0||amount>balance)
+ return alert("Invalid amount or insufficient balance");
+
+ balance-=amount;
+ transactions.unshift("Sent ₹"+amount+" to "+receiver);
+ saveWallet();
+ update();
+ alert("Demo transfer successful!");
+}
+
+function recharge(){
+ let mobile=prompt("Enter 10 digit mobile number");
+
+ if(!/^[0-9]{10}$/.test(mobile||""))
+ return alert("Invalid mobile number");
+
+ let amount=Number(prompt("Enter demo recharge amount"));
+
+ if(!Number.isFinite(amount)||amount<=0||amount>balance)
+ return alert("Invalid amount or insufficient balance");
+
+ balance-=amount;
+ transactions.unshift("Demo recharge ₹"+amount+" for "+mobile);
+ saveWallet();
+ update();
+ alert("Demo recharge successful. No real recharge made.");
+}
+
+function showHistory(){
+ alert(transactions.join("\n")||"No transactions yet");
+}
+
+function showProfile(){
+ alert("Name: "+currentUser.name+
+ "\nEmail: "+currentUser.email+
+ "\nWallet ID: DIGI001");
+}
+
+function logoutUser(){
+ stopScanner();
+ currentUser=null;
+ document.getElementById("dashboard").classList.add("hidden");
+ document.getElementById("auth").classList.remove("hidden");
+ showLogin();
+ document.getElementById("loginPassword").value="";
+}
+
+async function scanQR(){
+ if(!window.isSecureContext){
+  alert("QR camera requires HTTPS hosting.");
+  return;
+ }
+
+ if(!window.Html5Qrcode){
+  alert("QR scanner library could not load. Check internet.");
+  return;
+ }
+
+ try{
+  if(!scanner) scanner=new Html5Qrcode("reader");
+
+  await scanner.start(
+   {facingMode:"environment"},
+   {fps:10,qrbox:220},
+   (decodedText)=>{
+    document.getElementById("scanResult").innerText=
+    "Scanned demo QR: "+decodedText;
+    stopScanner();
+   },
+   ()=>{}
+  );
+ }catch(error){
+  alert("Camera unavailable. Please allow camera permission.");
+ }
+}
+
+async function stopScanner(){
+ if(scanner && scanner.isScanning){
+  await scanner.stop();
+ }
+}
+
+</script>
+
+<script src="https://unpkg.com/html5-qrcode"></script>
+
+</body>
+</html>
+
